@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "28977048210",
+    "project_id": "spyaudiorecorder-2e723",
+    "storage_bucket": "spyaudiorecorder-2e723.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:28977048210:android:3e15cdb7626ea298e0944b",
+        "android_client_info": {
+          "package_name": "com.android.sun2meg.spyaudiorecorder"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "28977048210-ukg1hbem283so04b200cmjhj2si0rlhq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAATBxLNITZQGmFr6ppdsD0YSQEYl-LeF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "28977048210-ukg1hbem283so04b200cmjhj2si0rlhq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

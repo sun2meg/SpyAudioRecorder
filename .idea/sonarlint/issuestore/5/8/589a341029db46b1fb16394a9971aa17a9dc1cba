@@ -1,0 +1,20 @@
+
+Q	java:S125
+"<This block of commented-out lines of code should be removed.(ú²’ä
+r
+java:S1450"\Remove the "mAudioManager" field and declare it as a local variable in the relevant methods.(©ÌìÇ
+Q	java:S125"<This block of commented-out lines of code should be removed.(»½º´
+]
+java:S1874%"BRemove this use of "FLAG_HANDLES_MEDIA_BUTTONS"; it is deprecated.(í¥ÂŞùÿÿÿÿ
+b
+java:S1874&"GRemove this use of "FLAG_HANDLES_TRANSPORT_CONTROLS"; it is deprecated.(Û©õÑüÿÿÿÿ
+P
+java:S1854*":Remove this useless assignment to local variable "action".(„—Èì
+A
+java:S1481*"+Remove this unused "action" local variable.(„—Èì
+V	java:S125-"<This block of commented-out lines of code should be removed.(Ç°ÿ©üÿÿÿÿ
+V	java:S1259"<This block of commented-out lines of code should be removed.(éØ»Úûÿÿÿÿ
+G
+java:S1068"1Remove this unused "mAudioManager" private field.(©ÌìÇ
+C
+java:S1068"-Remove this unused "mIsActive" private field.(åš€ã
