@@ -67,9 +67,6 @@ public class LockService extends Service {
             pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
         }
 
-//        Intent notificationIntent = new Intent(this, MainActivity.class);
-//        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
         {
             notificationChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "My Notifications", NotificationManager.IMPORTANCE_HIGH);
@@ -92,37 +89,6 @@ public class LockService extends Service {
             mNotifyManager.notify(1, mBuilder.build());
             startForeground(1, mBuilder.build());
         }
-    }
-
-    //    @Override
-    public int onStartCommand1(Intent intent, int flags, int startId) {
-        final IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        filter.addAction(Intent.ACTION_USER_PRESENT);
-
-
-
-        final BroadcastReceiver mReceiver = new ScreenReceiver();
-        registerReceiver(mReceiver, filter);
-
-
-        if(true) {
-
-            Notification notification1 = new NotificationCompat.Builder(getApplicationContext(), "CHANNEL_1_ID")
-                    .setSmallIcon(R.drawable.girl_vector)
-                    .setContentTitle("title")
-                    .setContentText("message")
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                    .build();
-            this.startForeground(115, notification1);
-            isRunning = true;
-            return START_NOT_STICKY;
-
-        }
-
-
-        return super.onStartCommand(intent, flags, startId);
     }
 
     @Override

@@ -76,15 +76,11 @@ int endTone;
                     MainActivity.getActivity().startRecording();
 
                     rec=true;
-//                    countRec =false;
-
-
                 } else {
-
                     v.vibrate(500);
                     ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_RING, endTone);
                     tone.startTone(ToneGenerator.TONE_CDMA_ANSWER, 200);
-                    MainActivity.getActivity().pauseRecording();
+                    MainActivity.getActivity().stopRecording();
                     rec=false;
                 }
 
@@ -120,18 +116,8 @@ int endTone;
 
 
 
-        } else if(intent.getAction().equals(Intent.ACTION_MEDIA_BUTTON)){
-            ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_RING, 0);
-            tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
-            Intent serviceIntent = new Intent(context, MyService2.class);
-            serviceIntent.getExtras().putParcelable(Intent.EXTRA_KEY_EVENT, intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT));
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent);
-            } else {
-                context.startService(serviceIntent);
-            }
-
         }
+
     }
 
 }

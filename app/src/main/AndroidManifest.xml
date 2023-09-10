@@ -39,7 +39,7 @@
             android:name=".Slider"
             android:exported="true"
             android:screenOrientation="portrait"/>
-        <service android:name=".MyService2" />
+
 
         <service
             android:name=".LockService"
