@@ -8,19 +8,26 @@
     <uses-permission android:name="android.permission.STORAGE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/audio"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:roundIcon="@drawable/audio"
         android:supportsRtl="true"
         android:theme="@style/Theme.SpyAudioRecorder">
         <activity
+            android:name=".Recordings"
+            android:exported="true" />
+        <activity
+            android:name=".Records"
+            android:exported="true" />
+        <activity
             android:name=".location"
             android:exported="true"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -34,12 +41,11 @@
         <activity
             android:name=".SettingsAct"
             android:exported="true"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait" />
         <activity
             android:name=".Slider"
             android:exported="true"
-            android:screenOrientation="portrait"/>
-
+            android:screenOrientation="portrait" />
 
         <service
             android:name=".LockService"
@@ -57,6 +63,16 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.android.sun2meg.spyaudiorecorder.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
     </application>
 
 </manifest>

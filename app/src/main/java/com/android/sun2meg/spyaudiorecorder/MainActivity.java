@@ -5,17 +5,21 @@ import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.TargetApi;
 import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
 import android.net.Uri;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.provider.DocumentsContract;
 import android.view.View;
 
+import androidx.core.content.FileProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
-
-import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
 import android.app.Activity;
@@ -40,6 +44,7 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,6 +57,7 @@ import androidx.navigation.ui.NavigationUI;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Date;
 
 import java.text.SimpleDateFormat;
@@ -81,17 +87,43 @@ public class MainActivity extends AppCompatActivity {
 
     // constant for storing audio permission
     public static final int REQUEST_AUDIO_PERMISSION_CODE = 1;
-
+    private static final int REQUEST_CODE_FOLDER_ACCESS = 1234;
 
     private boolean isRecording = false;
     private static MainActivity activity;
+    public static final String ACTION_START_RECORDING = "START_RECORDING";
+    public static final String ACTION_STOP_RECORDING = "STOP_RECORDING";
 //    @RequiresApi(api = Build.VERSION_CODES.O)
+
+//    private BroadcastReceiver receiver = new BroadcastReceiver() {
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            if (intent.getAction().equals(ACTION_START_RECORDING)) {
+//                try {
+//                    startRecording();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    showToast(String.valueOf(e));
+//                }
+//
+//                showToast("Recording started!"); // Display a toast
+//            }  else if (intent.getAction().equals(ACTION_STOP_RECORDING)) {
+//                pauseRecording();
+//                showToast("Recording started!"); // Display a toast
+//            }
+//        }
+//    };
+    private Button btnStopService;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        RequestPermissions();
+        // Request audio recording permission
+        if (!CheckPermissions()) {
+            RequestPermissions();
+        }
         activity=this;
         if(!foregroundServiceRunning()) {
             startService();
@@ -103,24 +135,27 @@ public class MainActivity extends AppCompatActivity {
         stopRec = findViewById(R.id.btnStop);
         playRec = findViewById(R.id.btnPlay);
         stopplayRec = findViewById(R.id.btnStopPlay);
-        stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
+//        stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
         playRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
         stopplayRec.setBackgroundColor(getResources().getColor(R.color.gray));
+        btnStopService=findViewById(R.id.stopButton);
 
         startRec.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!isRecording) {
+                try {
                     startRecording();
-                } else {
-                    stopRecording();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+
+
             }
         });
         stopRec.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                stopRecording();
+                pauseRecording();
 
             }
         });
@@ -137,21 +172,38 @@ public class MainActivity extends AppCompatActivity {
                 stopPlaying();
             }
         });
+        btnStopService.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopBackService();
+            }
+        });
 
-        // Request audio recording permission
-        if (!hasAudioRecordingPermission()) {
-            requestAudioRecordingPermission();
-        }
     }
+//
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
+//        IntentFilter filter = new IntentFilter();
+//        filter.addAction(ACTION_START_RECORDING);
+//        filter.addAction(ACTION_STOP_RECORDING);
+//        registerReceiver(receiver, filter);
+//    }
+
+//    @Override
+//    protected void onPause() {
+//        super.onPause();
+//        unregisterReceiver(receiver);
+//    }
 
 
-    private boolean hasAudioRecordingPermission() {
+    private boolean hasAudioRecordingPermission2() {
         // Check if audio recording permission is granted
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
         return permission == PackageManager.PERMISSION_GRANTED;
     }
 
-    private void requestAudioRecordingPermission() {
+    private void requestAudioRecordingPermission2() {
         // Request audio recording permission
         ActivityCompat.requestPermissions(
                 this,
@@ -192,8 +244,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void stops(){
 
+    public void stops(){
         stopplayRec.performClick();
     }
 
@@ -215,10 +267,48 @@ public class MainActivity extends AppCompatActivity {
 
 
     public String createAudioFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String audFileName = "AUD_" + timeStamp + "_";
+        String folderName = "AudioRecordings";
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                StorageManager storageManager = (StorageManager) getSystemService(Context.STORAGE_SERVICE);
+                StorageVolume storageVolume = storageManager.getPrimaryStorageVolume();
+                Method getDirectoryMethod = storageVolume.getClass().getMethod("getDirectory");
+                File primaryDir = (File) getDirectoryMethod.invoke(storageVolume);
+                storageDir = new File(primaryDir, folderName);
+            } catch (Exception e) {
+                // Fallback to using Environment.getExternalStorageDirectory() on exception
+                storageDir = new File(Environment.getExternalStorageDirectory(), folderName);
+            }
+        } else {
+            // For devices with API level lower than 24, use Environment.getExternalStorageDirectory()
+            storageDir = new File(Environment.getExternalStorageDirectory(), folderName);
+        }
+
+        if (!storageDir.exists()) {
+            if (!storageDir.mkdirs()) {
+                throw new IOException("Failed to create directory: " + storageDir.getAbsolutePath());
+            }
+        }
+
+        File audioFile = File.createTempFile(
+                audFileName,  /* prefix */
+                ".3gp",       /* suffix */
+                storageDir    /* directory */
+        );
+
+        return audioFile.toString();
+    }
+    public String createAudioFile0() throws IOException {
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String audFileName = "AUD_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+//        String folderName = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)+"/myFolder";
+//        storageDir = new File(folderName);
+       storageDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
 //         storageDir = new File(getExternalFilesDir(null) + "/" + "silenceRec" + "/");
 //         if(!storageDir.exists()){
 //             storageDir.mkdirs();
@@ -232,50 +322,105 @@ public class MainActivity extends AppCompatActivity {
         return vid.toString();
     }
 
+    void startRecording() throws IOException {
+        if(recEnabled) {
 
-     void startRecording() {
-        if (hasAudioRecordingPermission()) {
-            mFileName = getExternalCacheDir().getAbsolutePath() + "/audioRecord.3gp";
+            if (CheckPermissions()) {
+                stopRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
+                startRec.setBackgroundColor(getResources().getColor(R.color.gray));
+                mRecorder = new MediaRecorder();
 
-            mRecorder = new MediaRecorder();
-            mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mRecorder.setOutputFile(mFileName);
+                mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+//                mRecorder.setMaxDuration(24000);
+                try {
+                    mFileName = createAudioFile0();
+                    mRecorder.setOutputFile(mFileName);
+                    mRecorder.prepare();
+                    mRecorder.start();
+                    //////////////////////////////////////////////////////////////////
+                    statusRec.setText("Recording");
+                    recEnabled = false;
+                    stopRecEnabled=true;
+                } catch (IOException e) {
+                    Log.e("TAG", "prepare() failed");
+                }
+             } else {
+                RequestPermissions();
+            }
+        }else
+            Snackbar.make(findViewById(android.R.id.content),"already recording!", Snackbar.LENGTH_LONG).show();
+    }
 
+    public void pauseRecording() {
+        if(stopRecEnabled) {
+            stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
+            startRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
+            // the audio recording.
+            mRecorder.stop();
+            // below method will release
+            // the media recorder class.
+            mRecorder.release();
+            mRecorder = null;
+            statusRec.setText("Recording Stopped");
+            recEnabled=true;
+            ////////////////////////////////////////////////
+            stopRecEnabled=false;
+//            playEnabled = true;
+        }else {
+            Snackbar.make(findViewById(android.R.id.content),"Record already Paused!", Snackbar.LENGTH_LONG).show();
+
+        }
+    }
+
+    public void playAudio() {
+        if (playEnabled) {
+            mPlayer = new MediaPlayer();
             try {
-                mRecorder.prepare();
-                mRecorder.start();
-                statusRec.setText("Recording...");
-                isRecording = true;
-                startRec.setText("Pause");
-                stopRec.setEnabled(true);
+                if(mFileName != null) {
+
+                    playRec.setBackgroundColor(getResources().getColor(R.color.gray));
+                    stopplayRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
+                    mPlayer.setDataSource(mFileName);
+                    mPlayer.prepare();
+                    mPlayer.start();
+                    statusRec.setText(" Playing");
+                    playRec.setBackgroundColor(getResources().getColor(R.color.gray));
+                    stopplayRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
+                    playEnabled=false;
+                    stopPlayEnabled=true;
+
+                }else
+                    Snackbar.make(findViewById(android.R.id.content),"No Record yet!", Snackbar.LENGTH_LONG).show();
+
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e("TAG", "prepare() failed");
             }
+        } else
+            Snackbar.make(findViewById(android.R.id.content),"already playing!", Snackbar.LENGTH_LONG).show();
+
+    }
+
+    public void stopPlaying() {
+        if (!playEnabled) {
+//            if (stopPlayEnabled) {
+
+            mPlayer.stop();
+            mPlayer.release();
+            mPlayer = null;
+            statusRec.setText("Playback Stopped");
+            playRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
+            stopplayRec.setBackgroundColor(getResources().getColor(R.color.gray));
+            statusRec.setText("Playing Stopped");
+            playEnabled=true;
+            stopPlayEnabled = false;
         } else {
-            // Request permission if not granted
-            requestAudioRecordingPermission();
+            Snackbar.make(findViewById(android.R.id.content),"Play already Paused!", Snackbar.LENGTH_LONG).show();
         }
     }
 
-    void stopRecording() {
-        if (isRecording) {
-            try {
-                mRecorder.stop();
-                mRecorder.release();
-                mRecorder = null;
-                statusRec.setText("Recording Stopped");
-                isRecording = false;
-                startRec.setText("Record");
-                stopRec.setEnabled(false);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void playAudio() {
+    private void playAudioUpdate() {
         if (mFileName != null) {
             mPlayer = new MediaPlayer();
             try {
@@ -289,7 +434,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void stopPlaying() {
+    private void stopPlayingUpdate() {
         if (mPlayer != null && mPlayer.isPlaying()) {
             mPlayer.stop();
             mPlayer.release();
@@ -298,130 +443,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        // this method is called when user will
+        // grant the permission for audio recording.
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case REQUEST_AUDIO_PERMISSION_CODE:
+                if (grantResults.length > 0) {
+                    boolean permissionToRecord = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                    boolean permissionToStore = grantResults[1] == PackageManager.PERMISSION_GRANTED;
+                    boolean permissionToFolder = grantResults[2] == PackageManager.PERMISSION_GRANTED;
+                    if (permissionToRecord && permissionToStore && permissionToFolder) {
 
-        if (requestCode == REQUEST_AUDIO_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, you can start recording
-            } else {
-                // Permission denied, handle accordingly (show a message, etc.)
-                Toast.makeText(this, "Audio recording permission denied", Toast.LENGTH_SHORT).show();
-            }
+                        Snackbar.make(findViewById(android.R.id.content),"Permission Granted", Snackbar.LENGTH_LONG).show();
+                    } else {
+                        Snackbar.make(findViewById(android.R.id.content),"Permission Denied", Snackbar.LENGTH_LONG).show();
+                                 }
+                }
+                break;
         }
     }
-
-//
-//    void startRecording() {
-//        if(recEnabled) {
-//
-//            if (CheckPermissions()) {
-//                Drawable drawable;
-////if (playRec.getBackground()==getColor(R.color.gray)){}
-//
-//                // setbackgroundcolor method will change
-//                // the background color of text view.
-//                stopRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
-//                startRec.setBackgroundColor(getResources().getColor(R.color.gray));
-//
-//                // below method is used to initialize
-//                // the media recorder class
-//                mRecorder = new MediaRecorder();
-//
-//                // below method is used to set the audio
-//                // source which we are using a mic.
-//                mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-//
-//                // below method is used to set
-//                // the output format of the audio.
-//                mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-//
-//                // below method is used to set the
-//                // audio encoder for our recorded audio.
-//                mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-//
-//                // below method is used to set the
-//                // output file location for our recorded audio
-////                mRecorder.setOutputFile(mFileName);
-//
-//
-////
-////                mRecorder.setMaxDuration(24000);
-//                try {
-//                    mFileName= createAudioFile();
-//                    // below method will prepare
-//                    // our audio recorder class
-//                    mRecorder.setOutputFile(mFileName);
-//                    mRecorder.prepare();
-//                } catch (IOException e) {
-//                    Log.e("TAG", "prepare() failed");
-//                }
-//
-//                // start method will start
-//                // the audio recording.
-//                mRecorder.start();
-//                //////////////////////////////////////////////////////////////////
-//                statusRec.setText("Recording");
-//                recEnabled = false;
-//                stopRecEnabled=true;
-//            } else {
-//                // if audio recording permissions are
-//                // not granted by user below method will
-//                // ask for runtime permission for mic and storage.
-//                RequestPermissions();
-//            }
-//        }else
-//                    Snackbar.make(findViewById(android.R.id.content),"already recording!", Snackbar.LENGTH_LONG).show();
-//    }
-
-//    public void pauseRecording() {
-//        if(stopRecEnabled) {
-//            stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
-//            startRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
-//
-//            // the audio recording.
-//            mRecorder.stop();
-//
-//            // below method will release
-//            // the media recorder class.
-//            mRecorder.release();
-//            mRecorder = null;
-//            statusRec.setText("Recording Stopped");
-//
-//            recEnabled=true;
-//            ////////////////////////////////////////////////
-//            stopRecEnabled=false;
-//
-////            playEnabled = true;
-//        }else {
-//            Snackbar.make(findViewById(android.R.id.content),"Record already Paused!", Snackbar.LENGTH_LONG).show();
-//
-//        }
-//    }
-
-
-//    @Override
-//    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-//        // this method is called when user will
-//        // grant the permission for audio recording.
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-//        switch (requestCode) {
-//            case REQUEST_AUDIO_PERMISSION_CODE:
-//                if (grantResults.length > 0) {
-//                    boolean permissionToRecord = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-//                    boolean permissionToStore = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-//                    boolean permissionToFolder = grantResults[2] == PackageManager.PERMISSION_GRANTED;
-//                    if (permissionToRecord && permissionToStore && permissionToFolder) {
-//
-//                        Snackbar.make(findViewById(android.R.id.content),"Permission Granted", Snackbar.LENGTH_LONG).show();
-//                    } else {
-//                        Snackbar.make(findViewById(android.R.id.content),"Permission Denied", Snackbar.LENGTH_LONG).show();
-//                                 }
-//                }
-//                break;
-//        }
-//    }
 
     public boolean CheckPermissions() {
         // this method is used to check permission
@@ -443,97 +486,31 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    public void playAudio2() {
-        if (playEnabled) {
-            ///////////////////////////////////////////////////////////////////
-//            stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
-//            startRec.setBackgroundColor(getResources().getColor(R.color.gray));
-            ///////////////////////////////////////////////////////////////////////
+    private void openSpecificFolder(String folderPath) {
+        // Create a File object for the folder you want to open
+        File folder = new File(folderPath);
 
-
-            // for playing our recorded audio
-            // we are using media player class.
-            mPlayer = new MediaPlayer();
-            try {
-                if(mFileName != null) {
-
-
-                    playRec.setBackgroundColor(getResources().getColor(R.color.gray));
-                    stopplayRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
-                    playEnabled=false;
-                    stopPlayEnabled=true;
-
-                    // below method is used to set the
-                    // data source which will be our file name
-                    mPlayer.setDataSource(mFileName);
-
-                    // below method will prepare our media player
-                    mPlayer.prepare();
-
-                    // below method will start our media player.
-                    mPlayer.start();
-                    statusRec.setText(" Playing");
-                    playRec.setBackgroundColor(getResources().getColor(R.color.gray));
-                    stopplayRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
-
-                    playEnabled=false;
-                    stopPlayEnabled=true;
-
-                }else
-                    Snackbar.make(findViewById(android.R.id.content),"No Record yet!", Snackbar.LENGTH_LONG).show();
-
-            } catch (IOException e) {
-                Log.e("TAG", "prepare() failed");
+        // Check if the folder exists
+        if (folder.exists()) {
+            // Create an intent to open a file manager app
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            // Generate URI using FileProvider
+            Uri uri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider", folder);
+            // Set the MIME type based on the type of files in the folder
+            intent.setDataAndType(uri, "*/*");
+            // Validate that the device can open your File
+            PackageManager pm = getPackageManager();
+            if (intent.resolveActivity(pm) != null) {
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "No file manager app found.", Toast.LENGTH_SHORT).show();
             }
-        } else 
-        Snackbar.make(findViewById(android.R.id.content),"already playing!", Snackbar.LENGTH_LONG).show();
-
-    }
-
-    public void pausePlaying() {
-        if (stopPlayEnabled) {
-            // this method will release the media player
-            // class and pause the playing of our recorded audio.
-            mPlayer.release();
-            mPlayer = null;
-            //////////////////////////////////////////////////////////////////////////
-//            stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
-//            startRec.setBackgroundColor(getResources().getColor(R.color.purple_200));
-            playRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
-            stopplayRec.setBackgroundColor(getResources().getColor(R.color.gray));
-            statusRec.setText("Playing Stopped");
-///////////////////////////////////////////////////////////////////////////
-            //            recEnabled=true;
-
-            playEnabled=true;
-            stopPlayEnabled = false;
         } else {
-            Snackbar.make(findViewById(android.R.id.content),"Play already Paused!", Snackbar.LENGTH_LONG).show();
+            Toast.makeText(this, "Folder does not exist.", Toast.LENGTH_SHORT).show();
         }
     }
-    public void openFolder(String location) {
-        if (!location.isEmpty()){
-            // location = "/sdcard/my_folder";
-//            Intent intentD = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 
-//            Intent intent = new Intent(Intent.ACTION_PICK);
-
-            Uri mydir = Uri.parse(location);
-//            intent.setDataAndType(mydir, "application/*");    // or use */*
-//        intent.setDataAndType(mydir,"*/*");
-
-            File fil= new File(Environment.getExternalStorageDirectory(),"pictures");
-            intent.setDataAndType(Uri.fromFile(fil),"audio/3gpp");
-//            intent.setDataAndType(mydir,"audio/3gpp");
-            startActivity(intent);
-//            startActivity(Intent.createChooser(intent,"Open Folder"));
-        }else {
-            Snackbar.make(findViewById(android.R.id.content),"No file yet!", Snackbar.LENGTH_LONG).show();
-
-
-        }
-    }
 
 
 
@@ -559,7 +536,13 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
             return true;
         } else if(id == R.id.folder){
-            openDownloadsDirectory();
+            Intent intent = new Intent(getApplicationContext(), Records.class);
+            startActivity(intent);
+//            getFolder();
+
+//            openSpecificFolder(String.valueOf(Environment.getExternalStorageDirectory()));
+//            openDirectory();   ////works but
+//            openDownloadsDirectory();
 
 //            Intent intent = new Intent(getApplicationContext(), location.class);
 //            startActivity(intent);
@@ -572,55 +555,99 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void openDownloadsDirectory() {
+    @TargetApi(Build.VERSION_CODES.Q)
+    private void getFolder() {
+        StorageManager storageManager = (StorageManager) getSystemService(Context.STORAGE_SERVICE);
+        Intent intent = storageManager.getPrimaryStorageVolume().createOpenDocumentTreeIntent();
+        String targetDirectory = "Android";
+//        String targetDirectory = "Android%2Fmedia%2Fcom.whatsapp%2FWhatsapp%2FMedia%2FStatuses";
 
-//        Uri selectedUri = Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath());
-        Uri selectedUri = Uri.parse(Environment.getExternalStorageDirectory().toString() + "/Download/");
+        Uri uri = intent.getParcelableExtra("android.provider.extra.INITIAL_URI");
+        String scheme = uri.toString();
+        scheme += "%3A" + targetDirectory;
+        uri = Uri.parse(scheme);
 
-//        Uri selectedUri2 = Uri.parse(Environment.getExternalStorageDirectory().toString() + "/DCIM/");
+        intent.putExtra("android.provider.extra.INITIAL_URI", uri);
+        intent.putExtra("android.content.extra.SHOW_ADVANCED", true);
+        startActivityForResult(intent, 1234);
+    }
 
-        Intent intent = new Intent();
-        intent.setAction(android.content.Intent.ACTION_VIEW);
-        intent.setData(selectedUri);
-        intent.setType("*/*");
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
+    private void openFolder() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        Uri uri = Uri.parse(mFileName);
+        intent.setDataAndType(uri, "*/*");
+        startActivity(Intent.createChooser(intent, "Open folder"));
+    }
 
-//        Uri downloadsUri = Uri.parse("content://com.android.externalstorage.documents/tree/primary%3ADownload");
-//        Intent intent = new Intent(Intent.ACTION_VIEW);
-//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//        intent.setDataAndType(downloadsUri, DocumentsContract.Document.MIME_TYPE_DIR);
-//
-//        if (intent.resolveActivity(getPackageManager()) != null) {
-//            startActivity(intent);
-//        } else {
-//            // Handle the case where there is no app to handle the intent
-//            showToast("No app available to open the Downloads directory.");
-//        }
+    private void openDirectory() {
+        // Create an intent to open a file manager app
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        Uri uri = Uri.parse(Environment.getExternalStorageDirectory().getPath() + "/audioRec");
+//        Uri uri = Uri.parse(Environment.getExternalStorageDirectory().getPath()); // Use the root directory here
+
+        intent.setDataAndType(uri, "audio/3gpp"); // Set the MIME type to open any file type
+
+        // Check if there is a file manager app available
+        PackageManager pm = getPackageManager();
+        if (intent.resolveActivity(pm) != null) {
+            startActivity(intent);
+        } else {
+            // If no file manager app is available, you can show a message to the user
+            Toast.makeText(this, "No file manager app found.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+
+    private void openDir(){
+        File folder = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+
+        if (folder != null) {
+            Uri folderUri = FileProvider.getUriForFile(
+                    this,
+                    getApplicationContext().getPackageName() + ".provider",
+                    folder
+            );
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(folderUri, "*/*");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            if (intent.resolveActivity(getPackageManager()) != null) {
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "No app available to open the folder.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Downloads folder not found.", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private void openAudioFolder() {
+        // Get the external storage directory
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+//        File storageDir = new File(Environment.getExternalStorageDirectory(), "pictures");
+
+        if (storageDir.exists() && storageDir.isDirectory()) {
+            // Create an intent to view the folder using a file explorer app
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            Uri uri = Uri.fromFile(storageDir);
+            intent.setDataAndType(uri, "*/*");
+            startActivity(intent);
+        } else {
+            // Handle the case when the folder doesn't exist
+            // You can display a message or take appropriate action here
+        }
     }
 
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
-//    private void openDownloadsDirectory() {
-//        Uri downloadsUri = Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath());
-//        Intent intent = new Intent(Intent.ACTION_VIEW);
-//        intent.setDataAndType(downloadsUri, "audio/3gpp");
-////        intent.setDataAndType(downloadsUri, "*/*");
-//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//
-//        if (intent.resolveActivity(getPackageManager()) != null) {
-//            startActivity(intent);
-//        } else {
-//            // Handle the case where there is no app to handle the intent
-//            showToast("No app available to open the Downloads directory.");
-//        }
-//    }
-//
-//    private void showToast(String message) {
-//        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-//    }
-
+private void stopBackService() {
+    Intent serviceIntent = new Intent(this, LockService.class);
+    stopService(serviceIntent);
+}
     @Override
     public boolean onSupportNavigateUp() {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
@@ -628,6 +655,33 @@ public class MainActivity extends AppCompatActivity {
 //                || super.onSupportNavigateUp();
         return true;
     }
+
+
+
+        public void onClickFile()  {
+        // Get the directory path
+    File directory = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+
+                if (directory != null) {
+        // Create an intent to open the directory in a file manager app
+
+                    Intent intent = new Intent( Intent.ACTION_GET_CONTENT);
+//        Intent intent = new Intent(Intent.ACTION_VIEW);
+        Uri uri = Uri.fromFile(directory);
+        intent.setDataAndType(uri, "*/*");
+
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            // If a file manager app is available, start the intent to open the directory
+            startActivity(intent);
+        } else {
+            // If no file manager app is available, show a message to the user
+            Toast.makeText(MainActivity.this, "No file manager app found.", Toast.LENGTH_SHORT).show();
+        }
+    } else {
+        // External storage is not available or accessible
+        Toast.makeText(MainActivity.this, "External storage is not accessible.", Toast.LENGTH_SHORT).show();
+    }
+}
 
 
 
