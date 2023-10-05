@@ -1,11 +1,14 @@
 package com.android.sun2meg.spyaudiorecorder;
 import static android.content.Context.MODE_PRIVATE;
 
+import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
@@ -45,7 +48,7 @@ public class ScreenReceiver extends BroadcastReceiver {
     private boolean isRecording = false;
     private boolean rec = true;
     private Vibrator vibrator;
-    private ToneGenerator toneGenerator;
+    private ToneGenerator toneGenerator,toneGenerator2;
     private MediaRecorder mediaRecorder;
 
     private SharedPreferences sharedPreferences;
@@ -57,11 +60,21 @@ public class ScreenReceiver extends BroadcastReceiver {
     private Context appContext;
     //    private MainActivity mainActivity;///////////////////////////////
     private boolean recEnabled;
+    private static final int PERMISSION_REQUEST_CODE = 123; // You can choose any code
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
         Log.e(TAG, "onReceive");
         appContext = context.getApplicationContext();
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+//                    context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+//                    context.checkSelfPermission(Manifest.permission.MANAGE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+//                // Request permissions
+//                requestPermissions(context);
+//                return;
+//            }
+//        }
 //        setMainActivity(MainActivity.getActivity());/////////////////////////////////////
         sharedPreferences = context.getSharedPreferences("MySharedPref", Context.MODE_PRIVATE);
         boolean activateSwitch = sharedPreferences.getBoolean("value", false);
@@ -72,6 +85,7 @@ public class ScreenReceiver extends BroadcastReceiver {
 
         vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         toneGenerator = new ToneGenerator(AudioManager.STREAM_RING, startTone);
+        toneGenerator2 = new ToneGenerator(AudioManager.STREAM_RING, endTone);
 //        new Handler().postDelayed(new Runnable() {
 //            @Override
 //            public void run() {
@@ -87,20 +101,21 @@ public class ScreenReceiver extends BroadcastReceiver {
         }
 
 
-//        // Find and initialize the play button
-//        playButton = new Button(context);
-//        playButton.setText("Play Recorded Audio");
-//
-//        // Add the play button to your layout
-//        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
-//                RelativeLayout.LayoutParams.WRAP_CONTENT,
-//                RelativeLayout.LayoutParams.WRAP_CONTENT
-//        );
-//        layoutParams.addRule(RelativeLayout.BELOW, R.id.idRecstatus); // Adjust the rule as needed
-//        playButton.setLayoutParams(layoutParams);
-//        ((MainActivity) context).addContentView(playButton, layoutParams);
-//        // Add the play button to your layout
-//        addButtonWithClickEvent(context);
+    }
+
+    @TargetApi(Build.VERSION_CODES.R)
+    private void requestPermissions(Context context) {
+        // Request permissions from the user
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            String[] permissions = {
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.MANAGE_EXTERNAL_STORAGE
+            };
+
+            // Request permissions
+            ((Activity) context).requestPermissions(permissions, PERMISSION_REQUEST_CODE);
+        }
     }
 
     private synchronized void handleScreenOff() {
@@ -113,10 +128,10 @@ public class ScreenReceiver extends BroadcastReceiver {
 //                if (mainActivity != null) {
                 if (!isRecording) {
                     try {
-                        vibrator.vibrate(700);
-                        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+//                        vibrator.vibrate(700);
+//                        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
                         startRecording(context);
-                        isRecording = true;
+//                        isRecording = true;
                         // Rest of your code here
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -131,10 +146,10 @@ public class ScreenReceiver extends BroadcastReceiver {
                     try {
                         pauseRecording(context);
 
-                        vibrator.vibrate(700);
-                        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
-                        // Your other code here
-                        isRecording = false;
+//                        vibrator.vibrate(700);
+//                        toneGenerator2.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+//                        // Your other code here
+//                        isRecording = false;
                         // Rest of your code here
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -144,12 +159,6 @@ public class ScreenReceiver extends BroadcastReceiver {
 //                        mainActivity.pauseRecording();
 
                 }
-//                } else {
-//                    Log.e(TAG, "MainActivity is null");
-//                    showToast(context, "MainActivity is null");
-//                    setMainActivity(MainActivity.getActivity());
-//                    return; // Exit the method to prevent further execution
-//                }
             } catch (Exception e) {
                 e.printStackTrace();
                 showToast(context, "Exception: " + e.getMessage());
@@ -178,138 +187,72 @@ public class ScreenReceiver extends BroadcastReceiver {
         }, 2000);
     }
 
-//    private synchronized void handleScreenOn(Context context) {
-//        if (count > 1 && rec) {
-//            try {
-//                if (!isRecording) {
-//                    sendCustomIntent(context, MainActivity.ACTION_START_RECORDING);
-//                        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
-//                        vibrator.vibrate(700);
-//                        // Start audio recording
-////                        startRecording();
-//                        isRecording = true;
-//                } else {
-//                    vibrator.vibrate(500);
-//                    sendCustomIntent(context, MainActivity.ACTION_STOP_RECORDING);
-//                        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ANSWER, 200);
-//                        // Stop audio recording
-////                        stopRecording();
-//                        isRecording = false;
-//
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//                showToast(context, "Exception: " + e.getMessage());
-//            }
-//
-//            new CountDownTimer(5000, 1000) {
-//                @Override
-//                public void onTick(long l) {
-//                    rec = false;
-//                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
-//                    counter++;
-//                }
-//
-//                @Override
-//                public void onFinish() {
-//                    counter = 0;
-//                    rec = true;
-//                }
-//            }.start();
-//        }
-//
-//        count++;
-//
-//        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-//            count = 0;
-//        }, 2000);
-//    }
-    // Set MainActivity reference from outside
-//    public void setMainActivity(MainActivity activity) {
-//       mainActivity = activity;
-////        this.mainActivity = activity;
-//    }
-
     private void showToast(Context context, String message) {
         Toast.makeText(context, message, Toast.LENGTH_LONG).show();
     }
 
-    private void startRecording2() {
-        try {
-            Toast.makeText(appContext, "Playing Recorded Audio", Toast.LENGTH_SHORT).show();
-
-            fileName = Environment.getExternalStorageDirectory().getAbsolutePath() + "/audio.3gp";
-            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mediaRecorder.setOutputFile(fileName);
-            mediaRecorder.prepare();
-            mediaRecorder.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void stopRecording() {
-        try {
-            mediaRecorder.stop();
-            mediaRecorder.release();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void sendCustomIntent(Context context, String action) {
-        Intent intent = new Intent(action);
-        context.sendBroadcast(intent);
-    }
-
-    private void playRecordedAudio() throws IOException {
-        // Add code here to play the recorded audio using MediaPlayer or other audio player
-        try {
-            if (fileName != null) {
-                Toast.makeText(appContext, "Playing Recorded Audio", Toast.LENGTH_SHORT).show();
-
-                mediaPlayer = new MediaPlayer();
-                mediaPlayer.setDataSource(fileName);
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-            }
-        } catch (IOException e) {
-            Log.e("TAG", "prepare() failed");
-        }
-    }
 
 
     void startRecording(Context context) {
 
+//        if (mediaRecorder.getState() == MediaRecorder.State.INITIALIZED) {
+        if (mediaRecorder == null) {
 
-        try {
-            mediaRecorder = new MediaRecorder();
-            fileName = createAudioFile();
+            try {
+                mediaRecorder = new MediaRecorder();
+                fileName = createAudioFile();
+                mediaRecorder.setOnErrorListener(new MediaRecorder.OnErrorListener() {
+                    @Override
+                    public void onError(MediaRecorder mr, int what, int extra) {
+                        // Handle the error, log the details, or show an error message to the user
+                        switch (what) {
+                            case MediaRecorder.MEDIA_RECORDER_ERROR_UNKNOWN:
+                                // Handle unknown errors
+                                showToast(context, "MEDIA_RECORDER_ERROR_UNKNOWN");
+                                break;
+                            case MediaRecorder.MEDIA_ERROR_SERVER_DIED:
+                                // Handle server died error
+                                showToast(context, "MEDIA_ERROR_SERVER_DIED");
+                                break;
+                            // Add more cases for specific error types as needed
+                        }
+                    }
+                });
+
 //                            fileName = Environment.getExternalStorageDirectory().getAbsolutePath() + "/audio.3gp";
-            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mediaRecorder.setOutputFile(fileName);
-            mediaRecorder.prepare();
-            mediaRecorder.start();
+                mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+                mediaRecorder.setOutputFile(fileName);
+                mediaRecorder.prepare();
+                mediaRecorder.start();
 //                  fileName = Environment.getExternalStorageDirectory().getAbsolutePath() + "/audio.3gp";
 //                    mediaRecorder.setOutputFile(fileName);
 //                    mediaRecorder.prepare();
 //                    mediaRecorder.start();
 //
-            recEnabled = false;
-            showToast(context, "recording");
-        } catch (IOException e) {
-            Log.e("TAG", "prepare() failed");
-            showToast(context, String.valueOf(e));
+                vibrator.vibrate(700);
+                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+                recEnabled = false;
+                isRecording=true;
+                showToast(context, "recording");
+            } catch (IOException e) {
+//                recEnabled = true;
+//                isRecording=false;
+                Log.e("TAG", "prepare() failed");
+                releaseMediaRecorder();
+                showToast(context, String.valueOf(e));
+            } catch (IllegalStateException e) {
+                recEnabled = true;
+                isRecording=false;
+                e.printStackTrace();
+                releaseMediaRecorder();
+                showToast(context, String.valueOf(e));
+                // Handle the IllegalStateException, log the error, or show an error message to the user
+            }
+        } else {
+            showToast(context, "MediaRecorder is not in the correct state for recording.");
         }
-
-        // start method will start
-        // the audio recording.
-
-
     }
 
 
@@ -321,6 +264,11 @@ public class ScreenReceiver extends BroadcastReceiver {
             mediaRecorder.release();
             mediaRecorder = null;
             recEnabled = true;
+
+            vibrator.vibrate(700);
+            toneGenerator2.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+            // Your other code here
+            isRecording = false;
 
             showToast(context, "recording Stopped");
         } catch (Exception e) {
@@ -336,15 +284,12 @@ public class ScreenReceiver extends BroadcastReceiver {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String audFileName = "AUD_" + timeStamp + "_";
 
-        String folderName = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)+"/myFolder";
-    storageDir = new File(folderName);
+//        String folderName = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)+"/myFolder";
+        storageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"myAudio");
 
-//        storageDir = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-//        storageDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-//         storageDir = new File(getExternalFilesDir(null) + "/" + "silenceRec" + "/");
-         if(!storageDir.exists()){
-             storageDir.mkdirs();
-         }
+        if(!storageDir.exists()){
+            storageDir.mkdirs();
+        }
         File vid = File.createTempFile(
                 audFileName,  /* prefix */
                 ".3gp",         /* suffix */
@@ -354,24 +299,12 @@ public class ScreenReceiver extends BroadcastReceiver {
         return vid.toString();
     }
 
-    private void addButtonWithClickEvent(Context context) {
-        // Create a new button
-        Button button = new Button(context);
-        button.setText("Record"); // Set button text
-
-        playButton.setOnClickListener(new View.OnClickListener() {
-//        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // When the button is clicked, send the custom broadcast
-                try {
-                    playRecordedAudio();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
+    private void releaseMediaRecorder() {
+        if (mediaRecorder != null) {
+            mediaRecorder.reset();
+            mediaRecorder.release();
+            mediaRecorder = null;
+        }
     }
 
 

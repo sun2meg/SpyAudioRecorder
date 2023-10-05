@@ -3,16 +3,19 @@ package com.android.sun2meg.spyaudiorecorder;
 
 import com.google.android.material.snackbar.Snackbar;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.TargetApi;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
+import android.content.DialogInterface;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.provider.DocumentsContract;
+import android.view.LayoutInflater;
 import android.view.View;
 
 import androidx.core.content.FileProvider;
@@ -20,7 +23,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
-
+import androidx.annotation.NonNull;
 import android.Manifest;
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -44,7 +47,11 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,13 +65,17 @@ import androidx.navigation.ui.NavigationUI;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Date;
 
 import java.text.SimpleDateFormat;
+import java.util.List;
 
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+
+import org.jetbrains.annotations.Nullable;
 
 public class MainActivity extends AppCompatActivity {
     Boolean recEnabled=true;
@@ -81,10 +92,8 @@ public class MainActivity extends AppCompatActivity {
 
     // creating a variable for mediaplayer class
     private MediaPlayer mPlayer;
-
     // string variable is created for storing a file name
     private static String mFileName = null;
-
     // constant for storing audio permission
     public static final int REQUEST_AUDIO_PERMISSION_CODE = 1;
     private static final int REQUEST_CODE_FOLDER_ACCESS = 1234;
@@ -95,24 +104,11 @@ public class MainActivity extends AppCompatActivity {
     public static final String ACTION_STOP_RECORDING = "STOP_RECORDING";
 //    @RequiresApi(api = Build.VERSION_CODES.O)
 
-//    private BroadcastReceiver receiver = new BroadcastReceiver() {
-//        @Override
-//        public void onReceive(Context context, Intent intent) {
-//            if (intent.getAction().equals(ACTION_START_RECORDING)) {
-//                try {
-//                    startRecording();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                    showToast(String.valueOf(e));
-//                }
-//
-//                showToast("Recording started!"); // Display a toast
-//            }  else if (intent.getAction().equals(ACTION_STOP_RECORDING)) {
-//                pauseRecording();
-//                showToast("Recording started!"); // Display a toast
-//            }
-//        }
-//    };
+    private ListView fileListView;
+    private List<String> recordedFiles;
+    private ArrayAdapter<String> fileAdapter;
+
+
     private Button btnStopService;
 
 
@@ -140,14 +136,15 @@ public class MainActivity extends AppCompatActivity {
         stopplayRec.setBackgroundColor(getResources().getColor(R.color.gray));
         btnStopService=findViewById(R.id.stopButton);
 
+        fileListView = findViewById(R.id.fileListView);
+        recordedFiles = new ArrayList<>();
+        fileAdapter = new RecordedFileAdapter(this, R.layout.recorded_file_item, recordedFiles);
+        fileListView.setAdapter(fileAdapter);
+
         startRec.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    startRecording();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                startRecording();
 
 
             }
@@ -179,37 +176,141 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        fileListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String filePath = recordedFiles.get(position);
+                try {
+                    playAudio(filePath);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
     }
-//
-//    @Override
-//    protected void onResume() {
-//        super.onResume();
-//        IntentFilter filter = new IntentFilter();
-//        filter.addAction(ACTION_START_RECORDING);
-//        filter.addAction(ACTION_STOP_RECORDING);
-//        registerReceiver(receiver, filter);
-//    }
+    private void loadRecordedFiles() {
+        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"myAudio");
+//        String folderName = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)+"/myFolder";
+//        File dir = new File(folderName);
+//        File dir = getExternalCacheDir();
+        if (dir != null) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                recordedFiles.clear();
+                for (File file : files) {
+                    if (file.isFile()) {
+                        recordedFiles.add(file.getAbsolutePath());
+                    }
+                }
+                fileAdapter.notifyDataSetChanged();
+            }
+        }  else {
+            Toast.makeText(this, "Dir Not found .", Toast.LENGTH_SHORT).show();
 
-//    @Override
-//    protected void onPause() {
-//        super.onPause();
-//        unregisterReceiver(receiver);
-//    }
-
-
-    private boolean hasAudioRecordingPermission2() {
-        // Check if audio recording permission is granted
-        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
-        return permission == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+    private void playAudio(String filePath) throws IOException {
+        if (mPlayer == null) {
+            initializeMediaPlayer();
+        }
+        try {
+            mPlayer.reset();
+            mPlayer.setDataSource(filePath);
+            mPlayer.prepare();
+            mPlayer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void requestAudioRecordingPermission2() {
-        // Request audio recording permission
-        ActivityCompat.requestPermissions(
-                this,
-                new String[]{Manifest.permission.RECORD_AUDIO},
-                REQUEST_AUDIO_PERMISSION_CODE
-        );
+    private void initializeMediaPlayer() throws IOException {
+        mPlayer = new MediaPlayer();
+        mFileName = createAudioFile0();
+        try {
+            mPlayer.setDataSource(mFileName);
+            mPlayer.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private class RecordedFileAdapter extends ArrayAdapter<String> {
+
+        public RecordedFileAdapter(@NonNull Context context, int resource, @NonNull List<String> objects) {
+            super(context, resource, objects);
+        }
+
+        @NonNull
+        @Override
+        public View getView(final int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(R.layout.recorded_file_item, parent, false);
+            }
+
+            final String filePath = getItem(position);
+
+            Button playButton = convertView.findViewById(R.id.playButton);
+            Button stopButton = convertView.findViewById(R.id.stopButton);
+            Button deleteButton = convertView.findViewById(R.id.deleteButton);
+            TextView fileNameTextView = convertView.findViewById(R.id.fileNameTextView);
+
+            playButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        playAudio(filePath);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+            stopButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    stopAudio();
+                }
+            });
+
+            deleteButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showDeleteDialog(filePath, position);
+                }
+            });
+
+            fileNameTextView.setText(new File(filePath).getName());
+
+            return convertView;
+        }
+        private void showDeleteDialog(final String filePath, final int position) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("Delete File");
+            builder.setMessage("Are you sure you want to delete this file?");
+            builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    deleteFile(filePath);
+                    recordedFiles.remove(position);
+                    fileAdapter.notifyDataSetChanged();
+                }
+            });
+            builder.setNegativeButton("Cancel", null);
+            builder.show();
+        }
+
+        private void stopAudio() {
+            if (mPlayer != null && mPlayer.isPlaying()) {
+                mPlayer.stop();
+            }
+        }
+        private void deleteFile(String filePath) {
+            File file = new File(filePath);
+            if (file.exists()) {
+                file.delete();
+            }
+        }
     }
 
     public  static MainActivity getActivity(){
@@ -307,12 +408,12 @@ public class MainActivity extends AppCompatActivity {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String audFileName = "AUD_" + timeStamp + "_";
 //        String folderName = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)+"/myFolder";
-//        storageDir = new File(folderName);
-       storageDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        storageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"myAudio");
+//       storageDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
 //         storageDir = new File(getExternalFilesDir(null) + "/" + "silenceRec" + "/");
-//         if(!storageDir.exists()){
-//             storageDir.mkdirs();
-//         }
+         if(!storageDir.exists()){
+             storageDir.mkdirs();
+         }
         File vid = File.createTempFile(
                 audFileName,  /* prefix */
                 ".3gp",         /* suffix */
@@ -322,7 +423,79 @@ public class MainActivity extends AppCompatActivity {
         return vid.toString();
     }
 
-    void startRecording() throws IOException {
+    void startRecording() {
+        if(recEnabled) {
+            // check permission method is used to check
+            // that the user has granted permission
+            // to record nd store the audio.
+
+
+
+//
+//            ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+//            tone.startTone(ToneGenerator.TONE_CDMA_ANSWER, 200);
+
+            if (CheckPermissions()) {
+                Drawable drawable;
+//if (playRec.getBackground()==getColor(R.color.gray)){}
+
+                // setbackgroundcolor method will change
+                // the background color of text view.
+                stopRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
+                startRec.setBackgroundColor(getResources().getColor(R.color.gray));
+
+                // below method is used to initialize
+                // the media recorder class
+                mRecorder = new MediaRecorder();
+
+                // below method is used to set the audio
+                // source which we are using a mic.
+                mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+
+                // below method is used to set
+                // the output format of the audio.
+                mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+
+                // below method is used to set the
+                // audio encoder for our recorded audio.
+                mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+
+                // below method is used to set the
+                // output file location for our recorded audio
+//                mRecorder.setOutputFile(mFileName);
+
+
+//
+//                mRecorder.setMaxDuration(24000);
+                try {
+                    mFileName= createAudioFile0();
+                    // below method will prepare
+                    // our audio recorder class
+                    mRecorder.setOutputFile(mFileName);
+                    mRecorder.prepare();
+                } catch (IOException e) {
+                    Log.e("TAG", "prepare() failed");
+                }
+
+                // start method will start
+                // the audio recording.
+                mRecorder.start();
+                //////////////////////////////////////////////////////////////////
+                statusRec.setText("Recording");
+                recEnabled = false;
+                stopRecEnabled=true;
+            } else {
+                // if audio recording permissions are
+                // not granted by user below method will
+                // ask for runtime permission for mic and storage.
+                RequestPermissions();
+            }
+        }else
+            Snackbar.make(findViewById(android.R.id.content),"already recording!", Snackbar.LENGTH_LONG).show();
+    }
+
+
+    void startRecording00() throws IOException {
         if(recEnabled) {
 
             if (CheckPermissions()) {
@@ -354,6 +527,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void pauseRecording() {
+        if(stopRecEnabled) {
+            stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
+            startRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
+
+            mRecorder.stop();
+
+            // below method will release
+            // the media recorder class.
+            mRecorder.release();
+            mRecorder = null;
+            statusRec.setText("Recording Stopped");
+
+            recEnabled=true;
+            ////////////////////////////////////////////////
+            stopRecEnabled=false;
+
+//            playEnabled = true;
+        }else {
+            Snackbar.make(findViewById(android.R.id.content),"Record already Paused!", Snackbar.LENGTH_LONG).show();
+
+        }
+    }
+
+
+    public void pauseRecording00() {
         if(stopRecEnabled) {
             stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
             startRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
@@ -420,28 +618,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void playAudioUpdate() {
-        if (mFileName != null) {
-            mPlayer = new MediaPlayer();
-            try {
-                mPlayer.setDataSource(mFileName);
-                mPlayer.prepare();
-                mPlayer.start();
-                statusRec.setText("Playing...");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void stopPlayingUpdate() {
-        if (mPlayer != null && mPlayer.isPlaying()) {
-            mPlayer.stop();
-            mPlayer.release();
-            mPlayer = null;
-            statusRec.setText("Playback Stopped");
-        }
-    }
 
 
     @Override
@@ -536,8 +712,7 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
             return true;
         } else if(id == R.id.folder){
-            Intent intent = new Intent(getApplicationContext(), Records.class);
-            startActivity(intent);
+            loadRecordedFiles();
 //            getFolder();
 
 //            openSpecificFolder(String.valueOf(Environment.getExternalStorageDirectory()));

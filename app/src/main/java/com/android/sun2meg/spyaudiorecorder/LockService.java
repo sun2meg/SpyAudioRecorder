@@ -59,7 +59,9 @@ public class LockService extends Service {
 //                .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOngoing(true)
                 .setAutoCancel(false);
+
         Intent notificationIntent = new Intent(this, MainActivity.class);
+//        Intent notificationIntent = new Intent(this, Records.class);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
@@ -100,9 +102,14 @@ public class LockService extends Service {
         filter.addAction(Intent.ACTION_USER_PRESENT);
 
         filter.addAction(Intent.ACTION_MEDIA_BUTTON);
-//        IntentFilter filter2 = new IntentFilter();
+//        if (intent != null && "Crash".equals(intent.getAction())) {
+//            // Handle the crash event and take necessary actionse
+//            restartService();
+//        }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         Intent notificationIntent = new Intent(this, MainActivity.class);
+//        Intent notificationIntent = new Intent(this, Records.class);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
            pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
@@ -126,8 +133,6 @@ public class LockService extends Service {
                     .build();
             this.startForeground(115, notification);
         } else {
-
-
             Notification notification1 = new NotificationCompat.Builder(getApplicationContext(), "CHANNEL_1_ID")
                     .setSmallIcon(R.drawable.audio)
                     .setContentTitle("SpyAudio Recorder")
@@ -144,6 +149,12 @@ public class LockService extends Service {
         return START_STICKY;
     }
 
+    private void restartService() {
+        Intent restartIntent = new Intent(this, LockService.class);
+        // Indicate that the service is restarting due to a crash
+        restartIntent.setAction("CrashRestart");
+        startService(restartIntent);
+    }
     @Override
     public void onDestroy()
     {

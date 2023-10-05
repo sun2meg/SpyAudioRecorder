@@ -156,14 +156,19 @@
 
 
     </LinearLayout>
-   <LinearLayout
-       android:layout_below="@+id/lin2"
-       android:layout_width="match_parent"
-       android:layout_height="match_parent"
-       android:orientation="horizontal">
-       <include layout="@layout/play_button" />
 
-   </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@+id/lin2"
+                android:orientation="vertical">
+
+                <include layout="@layout/play_button" />
+
+
+            </LinearLayout>
+
+
         </androidx.percentlayout.widget.PercentRelativeLayout>
 
     </LinearLayout>
