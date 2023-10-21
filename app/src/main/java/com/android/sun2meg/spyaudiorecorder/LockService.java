@@ -25,7 +25,7 @@ import androidx.core.app.NotificationCompat;
 
 public class LockService extends Service {
     boolean isRunning = false;
-
+//    private MainActivity mainActivity;
 
     NotificationManager mNotifyManager;
     NotificationCompat.Builder mBuilder;
@@ -99,9 +99,9 @@ public class LockService extends Service {
         Log.d("RUNNER : ", "\nPERFORMING....");
         final IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
-        filter.addAction(Intent.ACTION_USER_PRESENT);
-
-        filter.addAction(Intent.ACTION_MEDIA_BUTTON);
+//        filter.addAction(Intent.ACTION_USER_PRESENT);
+//
+//        filter.addAction(Intent.ACTION_MEDIA_BUTTON);
 //        if (intent != null && "Crash".equals(intent.getAction())) {
 //            // Handle the crash event and take necessary actionse
 //            restartService();
@@ -144,6 +144,9 @@ public class LockService extends Service {
             isRunning = true;
         }
 /////////////////////////////////////////////////////////////////////////////////////////
+//        if (mainActivity == null) {
+//            mainActivity = new MainActivity(); // Initialize mainActivity here
+//        }
         final BroadcastReceiver mReceiver = new ScreenReceiver();
         registerReceiver(mReceiver, filter);
         return START_STICKY;

@@ -1,0 +1,48 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Records">
+
+    <Button
+        android:id="@+id/recordButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Record" />
+
+    <Button
+        android:id="@+id/playButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/recordButton"
+        android:text="Play" />
+
+    <Button
+        android:id="@+id/stopBut"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Stop Record"
+        android:layout_below="@id/playButton"
+        />
+
+    <Button
+        android:id="@+id/showFilesButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/stopBut"
+        android:text="Show Recorded Files" />
+    <LinearLayout
+        android:id="@+id/audioListLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp">
+
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/fileListView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/audioListLayout" />
+</RelativeLayout>

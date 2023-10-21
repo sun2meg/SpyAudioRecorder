@@ -1,5 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?><!--XML code for activity_main.xml-->
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -22,7 +23,7 @@
             app:popupTheme="@style/Theme.AppBar.PopupOverlay" />
 
     </com.google.android.material.appbar.AppBarLayout>
-    <!--Heading Text View-->
+
     <TextView
         android:id="@+id/txthead"
         android:layout_width="match_parent"
@@ -33,9 +34,6 @@
         android:textColor="@color/white"
         android:textSize="30sp" />
 
-
-    <!--This will display the status of our app when we will record some audio
-    and play that audio-->
     <TextView
         android:id="@+id/idRecstatus"
         android:layout_width="match_parent"
@@ -47,130 +45,128 @@
         android:textSize="18sp"
         android:textStyle="bold" />
 
-
-    <LinearLayout
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardView1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/parentLin"
-        android:orientation="vertical"
-        android:layout_below="@+id/idRecstatus">
-        <androidx.percentlayout.widget.PercentRelativeLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-    <!--Linear Layout for adding textviews in horizontal manner-->
-    <LinearLayout
-        android:id="@+id/lin1"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_heightPercent="35%"
+        android:layout_below="@+id/idRecstatus"
+        android:layout_margin="10dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:cardUseCompatPadding="true">
 
-        android:orientation="horizontal"
-        android:weightSum="2">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-
-
-        <!--Textview to start audio recording
-        drawableTop will add above mic image-->
-        <TextView
-            android:id="@+id/btnRecord"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="5dp"
-
-            android:layout_weight="1"
-            android:background="@color/purple_500"
-            android:paddingTop="10dp"
-            android:paddingBottom="5dp"
-            android:text="@string/start_recording"
-            android:textAlignment="center"
-            android:textColor="@color/white"
-            app:drawableTopCompat="@drawable/ic_start_recording"
-          />
-
-        <!--Textview to stop audio recording
-               drawableTop will add above mic image-->
-
-        <TextView
-            android:id="@+id/btnStop"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="5dp"
-        android:layout_weight="1"
-            android:background="@color/purple_500"
-            android:paddingTop="10dp"
-            android:paddingBottom="5dp"
-
-            android:text="@string/stop_recording"
-            android:textAlignment="center"
-            android:textColor="@color/white"
-            app:drawableTopCompat="@drawable/ic_stop_recording" />
-
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/lin2"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/lin1"
-        app:layout_heightPercent="35%"
-        android:layout_marginTop="5dp"
-        android:orientation="horizontal"
-        android:weightSum="2">
-
-        <!--Textview to start audio recording
-        drawableTop will add above mic image-->
-        <!--Textview to play audio that is recorded
-       drawableTop will add above mic image-->
-
-        <TextView
-            android:id="@+id/btnPlay"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="5dp"
-            android:layout_weight="1"
-            android:background="@color/purple_500"
-            android:paddingTop="10dp"
-            android:paddingBottom="5dp"
-            android:text="@string/play_recording"
-            android:textAlignment="center"
-            android:textColor="@color/white"
-            app:drawableTopCompat="@drawable/ic_play_audio" />
-
-        <!--Textview to pause the play of audio recording
-       drawableTop will add above mic image-->
-
-        <TextView
-            android:id="@+id/btnStopPlay"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="5dp"
-            android:layout_weight="1"
-            android:background="@color/purple_500"
-            android:paddingTop="10dp"
-            android:paddingBottom="5dp"
-            android:text="@string/stop_playing"
-            android:textAlignment="center"
-            android:textColor="@color/white"
-            app:drawableTopCompat="@drawable/ic_pause_audio" />
-
-
-    </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/btnRecord"
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_below="@+id/lin2"
-                android:orientation="vertical">
+                android:layout_weight="1"
+                android:background="@color/purple_500"
+                android:paddingTop="10dp"
+                android:paddingBottom="5dp"
+                android:text="@string/start_recording"
+                android:textAlignment="center"
+                android:textColor="@color/white"
+                app:drawableTopCompat="@drawable/ic_start_recording" />
 
-                <include layout="@layout/play_button" />
+            <TextView
+                android:id="@+id/btnStop"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@color/purple_500"
+                android:paddingTop="10dp"
+                android:paddingBottom="5dp"
+                android:text="@string/stop_recording"
+                android:textAlignment="center"
+                android:textColor="@color/white"
+                app:drawableTopCompat="@drawable/ic_stop_recording" />
 
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-            </LinearLayout>
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardView2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/cardView1"
+        android:layout_margin="10dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:cardUseCompatPadding="true">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-        </androidx.percentlayout.widget.PercentRelativeLayout>
+            <TextView
+                android:id="@+id/btnPlay"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@color/purple_500"
+                android:paddingTop="10dp"
+                android:paddingBottom="5dp"
+                android:text="@string/play_recording"
+                android:textAlignment="center"
+                android:textColor="@color/white"
+                app:drawableTopCompat="@drawable/ic_play_audio" />
 
-    </LinearLayout>
+            <TextView
+                android:id="@+id/btnStopPlay"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@color/purple_500"
+                android:paddingTop="10dp"
+                android:paddingBottom="5dp"
+                android:text="@string/stop_playing"
+                android:textAlignment="center"
+                android:textColor="@color/white"
+                app:drawableTopCompat="@drawable/ic_pause_audio" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardView3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/cardView2"
+        android:layout_margin="10dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:cardUseCompatPadding="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+
+            android:orientation="horizontal">
+
+        <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="stop service"
+        android:id="@+id/btnStopService"
+        android:layout_below="@id/cardView2" />
+
+    <Button
+        android:id="@+id/showListButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+
+        android:layout_below="@id/btnStopService"
+        android:text="Record List" />
+     </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <ListView
+        android:id="@+id/fileListView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/cardView3" />
 
 </RelativeLayout>

@@ -12,6 +12,7 @@ import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
 import android.content.IntentFilter;
 import android.net.Uri;
+import android.os.Vibrator;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.provider.DocumentsContract;
@@ -75,6 +76,8 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
+import static androidx.core.content.PackageManagerCompat.LOG_TAG;
+
 import org.jetbrains.annotations.Nullable;
 
 public class MainActivity extends AppCompatActivity {
@@ -99,18 +102,47 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_FOLDER_ACCESS = 1234;
 
     private boolean isRecording = false;
-    private static MainActivity activity;
+    public static MainActivity activity;
     public static final String ACTION_START_RECORDING = "START_RECORDING";
     public static final String ACTION_STOP_RECORDING = "STOP_RECORDING";
 //    @RequiresApi(api = Build.VERSION_CODES.O)
 
-    private ListView fileListView;
+//    private ListView fileListView;
     private List<String> recordedFiles;
     private ArrayAdapter<String> fileAdapter;
 
 
     private Button btnStopService;
+    private Vibrator v;
+    private ToneGenerator tone;
+    private ScreenReceiver screenReceiver;
+    private Button showListButton;
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+            Toast.makeText(this, "Crashed .", Toast.LENGTH_LONG).show();
+        if (mRecorder != null) {
+            mRecorder.stop();
+            mRecorder.release();
+            mRecorder = null;
+        }
+        if (mPlayer != null) {
+            mPlayer.stop();
+            mPlayer.release();
+            mPlayer = null;
+        }
+    }
 
+//        @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        if(mRecorder !=null){
+//            Toast.makeText(this, "Crashed .", Toast.LENGTH_LONG).show();
+////            stopRecording();
+//            pauseRecording();
+//        }
+
+//    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,27 +163,43 @@ public class MainActivity extends AppCompatActivity {
         stopRec = findViewById(R.id.btnStop);
         playRec = findViewById(R.id.btnPlay);
         stopplayRec = findViewById(R.id.btnStopPlay);
+
+        showListButton = findViewById(R.id.showListButton);
+
+        // Set a click listener for the button
+        showListButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Show the BottomSheetFragment
+//                loadRecordedFiles();
+                BottomSheetFragment bottomSheetFragment = new BottomSheetFragment();
+
+                bottomSheetFragment.show(getSupportFragmentManager(), bottomSheetFragment.getTag());
+            }
+        });
+
 //        stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
         playRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
         stopplayRec.setBackgroundColor(getResources().getColor(R.color.gray));
-        btnStopService=findViewById(R.id.stopButton);
+        btnStopService=findViewById(R.id.btnStopService);
 
-        fileListView = findViewById(R.id.fileListView);
+//        fileListView = findViewById(R.id.fileListView);
         recordedFiles = new ArrayList<>();
         fileAdapter = new RecordedFileAdapter(this, R.layout.recorded_file_item, recordedFiles);
-        fileListView.setAdapter(fileAdapter);
+//        fileListView.setAdapter(fileAdapter);
 
+        v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        tone= new ToneGenerator(AudioManager.STREAM_RING, 80);
         startRec.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startRecording();
-
-
             }
         });
         stopRec.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+//                stopRecording();
                 pauseRecording();
 
             }
@@ -176,17 +224,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        fileListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String filePath = recordedFiles.get(position);
-                try {
-                    playAudio(filePath);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
 
     }
     private void loadRecordedFiles() {
@@ -397,7 +434,8 @@ public class MainActivity extends AppCompatActivity {
 
         File audioFile = File.createTempFile(
                 audFileName,  /* prefix */
-                ".3gp",       /* suffix */
+                ".3gp",       /*
+                suffix */
                 storageDir    /* directory */
         );
 
@@ -423,49 +461,74 @@ public class MainActivity extends AppCompatActivity {
         return vid.toString();
     }
 
+
+    public void backRecord() throws IOException {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            if (CheckPermissions()) {
+                startRecording();
+            } else {
+                RequestPermissions();
+            }
+        }
+    }
+
+    private void startRecording2() throws IOException {
+        mRecorder = new MediaRecorder();
+        mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+//        storageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"myAudio");
+               mFileName= createAudioFile0();
+        mRecorder.setOutputFile(mFileName);
+        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        try {
+            mRecorder.prepare();
+            mRecorder.start();
+            isRecording = true;
+            tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+            v.vibrate(700);
+
+            statusRec.setText(" Recording starts");
+//            recordButton.setText("Stop");
+            Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "startRecording: " + e.getMessage());
+            Toast.makeText(this, "Recording failed to start", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void stopRecording() {
+        if (mRecorder != null) {
+            mRecorder.stop();
+            mRecorder.release();
+            mRecorder = null;
+            isRecording = false;
+            tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+                    v.vibrate(700);
+
+            statusRec.setText(" Recording stoppped");
+            Toast.makeText(this, "Recording stopped", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     void startRecording() {
-        if(recEnabled) {
-            // check permission method is used to check
-            // that the user has granted permission
-            // to record nd store the audio.
-
-
-
-//
+        if(!isRecording) {
+//        if(recEnabled) {
 //            ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
 //            tone.startTone(ToneGenerator.TONE_CDMA_ANSWER, 200);
-
-            if (CheckPermissions()) {
-                Drawable drawable;
-//if (playRec.getBackground()==getColor(R.color.gray)){}
-
-                // setbackgroundcolor method will change
-                // the background color of text view.
+//
+//            if (CheckPermissions()) {
                 stopRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
                 startRec.setBackgroundColor(getResources().getColor(R.color.gray));
-
-                // below method is used to initialize
-                // the media recorder class
                 mRecorder = new MediaRecorder();
-
-                // below method is used to set the audio
-                // source which we are using a mic.
                 mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-
-                // below method is used to set
-                // the output format of the audio.
                 mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 
                 // below method is used to set the
                 // audio encoder for our recorded audio.
                 mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
 
-                // below method is used to set the
-                // output file location for our recorded audio
-//                mRecorder.setOutputFile(mFileName);
-
-
-//
 //                mRecorder.setMaxDuration(24000);
                 try {
                     mFileName= createAudioFile0();
@@ -484,50 +547,21 @@ public class MainActivity extends AppCompatActivity {
                 statusRec.setText("Recording");
                 recEnabled = false;
                 stopRecEnabled=true;
-            } else {
-                // if audio recording permissions are
-                // not granted by user below method will
-                // ask for runtime permission for mic and storage.
-                RequestPermissions();
-            }
+                isRecording=true;
+//            } else {
+//                // if audio recording permissions are
+//                // not granted by user below method will
+//                // ask for runtime permission for mic and storage.
+//                RequestPermissions();
+//            }
         }else
             Snackbar.make(findViewById(android.R.id.content),"already recording!", Snackbar.LENGTH_LONG).show();
     }
 
-
-    void startRecording00() throws IOException {
-        if(recEnabled) {
-
-            if (CheckPermissions()) {
-                stopRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
-                startRec.setBackgroundColor(getResources().getColor(R.color.gray));
-                mRecorder = new MediaRecorder();
-
-                mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-                mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-//                mRecorder.setMaxDuration(24000);
-                try {
-                    mFileName = createAudioFile0();
-                    mRecorder.setOutputFile(mFileName);
-                    mRecorder.prepare();
-                    mRecorder.start();
-                    //////////////////////////////////////////////////////////////////
-                    statusRec.setText("Recording");
-                    recEnabled = false;
-                    stopRecEnabled=true;
-                } catch (IOException e) {
-                    Log.e("TAG", "prepare() failed");
-                }
-             } else {
-                RequestPermissions();
-            }
-        }else
-            Snackbar.make(findViewById(android.R.id.content),"already recording!", Snackbar.LENGTH_LONG).show();
-    }
 
     public void pauseRecording() {
-        if(stopRecEnabled) {
+        if(isRecording) {
+//        if(stopRecEnabled) {
             stopRec.setBackgroundColor(getResources().getColor(R.color.gray));
             startRec.setBackgroundColor(getResources().getColor(R.color.purple_700));
 
@@ -542,7 +576,7 @@ public class MainActivity extends AppCompatActivity {
             recEnabled=true;
             ////////////////////////////////////////////////
             stopRecEnabled=false;
-
+            isRecording=false;
 //            playEnabled = true;
         }else {
             Snackbar.make(findViewById(android.R.id.content),"Record already Paused!", Snackbar.LENGTH_LONG).show();
@@ -659,8 +693,6 @@ public class MainActivity extends AppCompatActivity {
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{RECORD_AUDIO, WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE}, REQUEST_AUDIO_PERMISSION_CODE);
 
     }
-
-
 
     private void openSpecificFolder(String folderPath) {
         // Create a File object for the folder you want to open

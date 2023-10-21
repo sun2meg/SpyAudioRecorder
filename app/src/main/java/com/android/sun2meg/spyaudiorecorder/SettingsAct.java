@@ -44,7 +44,7 @@ public class SettingsAct extends AppCompatActivity implements AdapterView.OnItem
         simpleSwitch2 = (Switch) findViewById(R.id.simpleSwitch2);
 
         simpleSwitch1.setChecked(sharedPreferences.getBoolean("value",false));
-        simpleSwitch2.setChecked(sharedPreferences.getBoolean("value2",false));
+        simpleSwitch2.setChecked(sharedPreferences.getBoolean("value2",true));
         simpleSwitch1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
